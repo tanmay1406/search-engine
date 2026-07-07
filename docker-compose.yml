@@ -1,0 +1,70 @@
+version: "3.9"
+
+services:
+  # MongoDB backend
+  mongo:
+    image: mongo:7
+    container_name: search-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Master server
+  master:
+    build: .
+    container_name: search-master
+    command: >
+      python master.py --ip master:50051 --backup backup:50063
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/
+      - MASTER_IP=master:50051
+      - BACKUP_IP=backup:50063
+      - REPLICAS_LIST_FILE=replicas_list.txt
+    ports:
+      - "50051:50051"
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  # Backup server
+  backup:
+    build: .
+    container_name: search-backup
+    command: >
+      python masterbackup.py --ip backup:50063 --master master:50051
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/
+      - MASTER_IP=master:50051
+      - BACKUP_IP=backup:50063
+    ports:
+      - "50063:50063"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      master:
+        condition: service_started
+
+  # Replica server
+  replica1:
+    build: .
+    container_name: search-replica1
+    command: >
+      python replica.py --ip replica1:50053 --port 50053 --name replica1
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/
+    ports:
+      - "50053:50053"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      master:
+        condition: service_started
+
+volumes:
+  mongo_data:

@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+/* 
+Contains protobuf specifications for search requests and responses from client to master server
+*/
+
+
+message SearchRequest {
+	string query = 1;
+	string location = 2;
+}
+
+message SearchResponse {
+	repeated string urls = 3;
+}
+
+message CommitRequest {
+	// for the crawler updates
+	string data = 4;
+	
+	// for the 2 phase commit 
+	string replica_ip =5;
+	string location = 6;
+	repeated string indices = 7;
+}
+
+message CommitVote {
+	int32 status = 5;
+}
+
+enum CommitCode {
+    COMMIT = 0;
+    ROLL_BACK = 1;
+}
+
+message CommitStatusUpdate {
+	CommitCode code = 6;
+}
+
+message Acknowledgement {
+	int32 status = 7;
+}
+
+service Search {
+	rpc SearchForString(SearchRequest) returns (SearchResponse) {}
+}
+
+service DatabaseWrite {
+	rpc WriteIndicesToTable(CommitRequest) returns (Acknowledgement) {}
+	rpc QueryToCommit(CommitRequest) returns (CommitVote) {}
+	rpc CommitPhase(CommitStatusUpdate) returns (Acknowledgement) {}
+}
+
+
+message IsMaster {
+	// message sent by the backup to crawler to inform of the change in master
+	string ip = 1;
+}
+
+message HealthCheckRequest {
+	string healthCheck = 1;
+}
+
+message HealthCheckResponse {
+	string status = 1;
+	string data = 2;
+}
+
+service HealthCheck {
+ 	rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+service LeaderNotice {
+	// rpc by masterbackup to crawler to inform change in master
+ 	rpc MasterChange(IsMaster) returns (Acknowledgement);
+}
+
+// for the dynamic replication
+message ReplicaRequest {
+	string data = 1;
+	string master_ip = 2;
+	bool create = 3;
+}
+
+message ReplicaStatus {
+	int32 status = 1;
+}
+
+service ReplicaCreation {
+	rpc CreateReplica(ReplicaRequest) returns (ReplicaStatus);
+}
+
+service ReplicaUpdate {
+	rpc UpdateReplica(ReplicaRequest) returns (ReplicaStatus);
+}

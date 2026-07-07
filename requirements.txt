@@ -1,0 +1,27 @@
+# Python 3 requirements (originally pinned to Python-2-only versions from ~2018).
+#
+# Removed vs. the original file:
+#   enum34   -> Python 3's stdlib has `enum` built in; this was a Python-2-only backport.
+#   futures  -> Python 3's stdlib has `concurrent.futures` built in; same story.
+#   six      -> never actually imported anywhere in this codebase (grep confirms it);
+#               it was a transitive Python-2/3 shim pulled in by the old grpcio/protobuf.
+#   protobuf -> not pinned directly; grpcio-tools pulls in a compatible version
+#               automatically, and a hand-pin here risks fighting that resolution.
+#
+# Verified current (as of this port) on PyPI:
+grpcio>=1.81.1
+grpcio-tools>=1.81.1
+pymongo>=4.17.0
+python-dotenv>=1.0.0
+cachetools>=5.0.0
+
+# RandomWords is confirmed still on PyPI at 0.4.0, but it's an unmaintained,
+# low-download package (no release in the last year per PyPI/Snyk) - pinned exact
+# rather than >= since there's no active upstream to trust for compatibility.
+# If it fails to install for you, data/generatedata.py's only use of it is
+# `RandomWords().random_words(count=r, letter=word[0])` - trivial to replace with
+# your own small wordlist + random.sample() if needed.
+RandomWords==0.4.0
+
+# NOTE: do NOT separately `pip install bson` - pymongo ships its own bson module,
+# and the standalone PyPI "bson" package is a different, incompatible library.
